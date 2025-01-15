@@ -3,14 +3,14 @@ project:
   output-dir: docs
 
 website:
-  title: "blog"
+  title: "Piloxita's blog"
   navbar:
     right:
       - about.qmd
       - icon: github
-        href: https://github.com/
-      - icon: twitter
-        href: https://twitter.com
+        href: https://github.com/Piloxita
+      - icon: linkedin
+        href: https://www.linkedin.com/in/longlpnguyen/
 format:
   html:
     theme: cosmo
