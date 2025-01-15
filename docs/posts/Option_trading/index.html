@@ -190,10 +190,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
+<p><img src="image.jpg" class="img-fluid"></p>
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>It started like many trading days before—a quiet anticipation as I scrolled through earnings reports, scanning for opportunities. But this time, something clicked. Over the years, I’d noticed a recurring pattern: earnings announcements often sent stock prices soaring or tumbling. These moments, while fleeting, held immense potential for profit.</p>
-<p>I decided to dig deeper. Could machine learning, with its ability to uncover hidden patterns in data, help me predict the magnitude of these price movements? Armed with curiosity, a straddle strategy, and a passion for data, I set out on a journey to merge trading and technology. This post is the story of that journey.</p>
+<p>It started like many trading days before—a quiet anticipation as I scrolled through earnings reports, scanning for opportunities. But this time, something clicked. Over the years, I’d noticed a recurring pattern: earnings announcements often sent stock prices soaring or tumbling. These fleeting moments held immense potential for profit.</p>
+<p>Driven by curiosity, I asked myself: could machine learning—with its ability to uncover hidden patterns in data—help predict the magnitude of these price movements? Armed with a passion for data and a love for strategy, I set out to merge technology and trading. This blog captures my journey.</p>
+</section>
+<section id="folder-and-environment-setup" class="level1">
+<h1>Folder and Environment Setup</h1>
+<p>Before jumping into the data, I made sure to set up an efficient and organized working environment. Here’s a simple setup to get you started:</p>
+<ol type="1">
+<li>Place your Excel file and Jupyter Notebook in the same folder.</li>
+<li>For a complete project structure, I recommend this helpful <a href="https://towardsdatascience.com/how-to-structure-an-ml-project-for-reproducibility-and-maintainability-54d5e53b4c82">guide</a>.</li>
+</ol>
+<p><strong>Python Environment:</strong> Use a <a href="https://medium.com/towards-data-science/introduction-to-conda-virtual-environments-eaea4ac84e28">virtual environment</a> to ensure consistency:</p>
+<ul>
+<li>Create a virtual environment using <code>conda env create --name &lt;env name&gt;</code>.<br>
+</li>
+<li>Activate the environment (<code>conda activate &lt;env name&gt;</code>).<br>
+</li>
+<li>Install the necessary packages, such as <code>pandas</code>, <code>numpy</code>, <code>scikit-learn</code>, <code>lightgbm</code>, <code>xgboost</code>, and <code>catboost</code>.</li>
+<li><strong>Note:</strong> you can find my environment.yml file in <a href="https://github.com/Piloxita/option_trade">my github repo</a> to set up a completely similar environment for this project.</li>
+</ul>
+<p><strong>Version Control:</strong> Use Git for version control to track changes in your project.</p>
+<p>This setup ensures that your workflow is clean, reproducible, and scalable as the project evolves.</p>
 </section>
 <section id="collecting-and-storing-data" class="level1">
 <h1>Collecting and Storing Data</h1>
@@ -203,20 +223,76 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Sentiment Indicators:</strong> The put/call ratio, a barometer of market sentiment during earnings seasons.</li>
 <li><strong>Historical Earnings Movements:</strong> Data on how stock prices reacted to past earnings announcements.</li>
 </ul>
-<p>I meticulously compiled these features, ensuring they were well-organized in Excel for easy analysis. Think of it as laying the groundwork for a house—the more solid your foundation, the better the outcome.</p>
+<p>I compiled these features in an Excel file, structured for easy analysis. Remember to save your file in the same directory as your notebook.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="excel1.jpg" class="img-fluid figure-img" alt="My excel file with pandas-friendly labels."></p>
+<figcaption>Figure 1: My excel file with pandas-friendly labels</figcaption>
+</figure>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="excel2.jpg" class="img-fluid figure-img"></p>
+<figcaption>Figure 2: My excel file with pandas-friendly labels (cont)</figcaption>
+</figure>
+</div>
+<p>Some of this data, like call/put options and momentum grades, may require a subscription. You can explore options data on <a href="https://seekingalpha.com/symbol/AAPL/options">Seeking Alpha</a> or stock data on <a href="https://www.tradingview.com/">TradingView</a>.</p>
 </section>
 <section id="input-and-clean-data" class="level1">
 <h1>Input and Clean Data</h1>
 <p>Once my data was in place, the next step was to clean and prepare it for analysis. This is where the real magic happens:</p>
 <ol type="1">
-<li><strong>Importing Data:</strong> Using Python’s <code>pandas</code> library to read the Excel file into a structured format.</li>
-<li><strong>Preprocessing:</strong>
-<ul>
-<li>Filling in missing values like a detective piecing together a puzzle.</li>
-<li>Normalizing numerical features to ensure consistency across the dataset.</li>
-<li>Encoding categorical variables so the machine learning models could make sense of them.</li>
-</ul></li>
+<li><strong>Importing Libraries</strong></li>
 </ol>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> ColumnTransformer</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.pipeline <span class="im">import</span> Pipeline</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder, OrdinalEncoder</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.ensemble <span class="im">import</span> GradientBoostingRegressor</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ol start="2" type="1">
+<li><strong>Importing Data:</strong> Using Python’s <code>pandas</code> library to read the Excel file into a structured format.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_excel(<span class="st">'open interest.xlsx'</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>df.tail()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="df.jpg" class="img-fluid figure-img"></p>
+<figcaption>Figure 3: Read excel to panda dataframe</figcaption>
+</figure>
+</div>
+<ol start="3" type="1">
+<li><strong>Split Dataset to Train and Test set:</strong> This is to make sure there is no data leakage happening in the training process</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>train_df, test_df <span class="op">=</span> train_test_split(df, test_size<span class="op">=</span><span class="fl">0.1</span>, random_state<span class="op">=</span><span class="dv">123</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> train_df.drop(<span class="st">'Day_after_earning_gain_loss'</span>, axis <span class="op">=</span> <span class="dv">1</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>y_train <span class="op">=</span> train_df[<span class="st">'Day_after_earning_gain_loss'</span>]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> test_df.drop(<span class="st">'Day_after_earning_gain_loss'</span>, axis <span class="op">=</span> <span class="dv">1</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>y_test <span class="op">=</span> test_df[<span class="st">'Day_after_earning_gain_loss'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ol start="4" type="1">
+<li><strong>Preprocessing</strong></li>
+</ol>
+<ul>
+<li><strong>Drop Irrelevant Columns:</strong> Remove columns like <code>Date</code> and <code>Ticker</code> that do not add value to the predictive model.</li>
+<li><strong>One-Hot Encoding:</strong> Convert categorical variables such as <code>Weekday</code>, <code>Industry</code>, and <code>Revenue_source</code> into numerical representations.</li>
+<li><strong>Ordinal Encoding:</strong> Transform ordinal features, such as <code>Momentum_Grade</code>, based on a predefined category order.</li>
+<li><strong>Pass-through Features:</strong> Allow numerical columns that require no transformation to pass through unchanged.</li>
+</ul>
+<p>Here’s a Python snippet illustrating the preprocessing pipeline:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>drop_columns <span class="op">=</span> [<span class="st">'Date'</span>, <span class="st">'Ticker'</span>]</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>one_hot_columns <span class="op">=</span> [<span class="st">'Weekday'</span>, <span class="st">'Industry'</span>, <span class="st">'Revenue_source'</span>]</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>ordinal_columns <span class="op">=</span> [<span class="st">'Momentum_Grade'</span>]</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>pass_through_columns <span class="op">=</span> <span class="bu">list</span>(<span class="bu">set</span>(X_train.columns) <span class="op">-</span> <span class="bu">set</span>(drop_columns <span class="op">+</span> one_hot_columns <span class="op">+</span> ordinal_columns <span class="op">+</span> [<span class="st">'Day_after_earning_gain_loss'</span>]))</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>preprocessor <span class="op">=</span> ColumnTransformer(</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    transformers<span class="op">=</span>[</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        (<span class="st">'drop'</span>, <span class="st">'drop'</span>, drop_columns),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        (<span class="st">'onehot'</span>, OneHotEncoder(handle_unknown<span class="op">=</span><span class="st">'ignore'</span>), one_hot_columns),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        (<span class="st">'ordinal'</span>, OrdinalEncoder(categories<span class="op">=</span>[momentum_grade_order]), ordinal_columns),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        (<span class="st">'passthrough'</span>, <span class="st">'passthrough'</span>, pass_through_columns)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    ]</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Data preparation might seem tedious, but it’s the unsung hero of any successful machine learning project. Without clean data, even the best algorithms can falter.</p>
 </section>
 <section id="training-models" class="level1">
@@ -228,32 +304,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>CatBoost:</strong> A natural choice for datasets with categorical variables.</li>
 </ul>
 <p>However, with a limited dataset, I faced a tough decision: should I fine-tune the models or stick with their default settings? To avoid overfitting, I chose the latter, focusing on creating a balanced baseline instead. Here’s a snippet of how I trained the models:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lightgbm <span class="im">import</span> LGBMRegressor</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> xgboost <span class="im">import</span> XGBRegressor</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> catboost <span class="im">import</span> CatBoostRegressor</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize models</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>models <span class="op">=</span> [</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    LGBMRegressor(),</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    XGBRegressor(),</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    CatBoostRegressor(verbose<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>]</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Train models</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> model <span class="kw">in</span> models:</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    model.fit(X_train, y_train)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Evaluate</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> model <span class="kw">in</span> models:</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>model<span class="sc">.</span>__class__<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss"> Score: </span><span class="sc">{</span>model<span class="sc">.</span>score(X_test, y_test)<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.ensemble <span class="im">import</span> VotingRegressor</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lightgbm <span class="im">import</span> LGBMRegressor</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> xgboost <span class="im">import</span> XGBRegressor</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> catboost <span class="im">import</span> CatBoostRegressor</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>lgbm <span class="op">=</span> LGBMRegressor()</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>xgb <span class="op">=</span> XGBRegressor(verbosity<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>catboost <span class="op">=</span> CatBoostRegressor(verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>ensemble_model <span class="op">=</span> VotingRegressor(estimators<span class="op">=</span>[</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'lgbm'</span>, lgbm),</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'xgb'</span>, xgb),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'catboost'</span>, catboost)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>pipeline <span class="op">=</span> Pipeline(steps<span class="op">=</span>[</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'preprocessor'</span>, preprocessor),</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'regressor'</span>, ensemble_model)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="making-predictions-and-setting-up-a-trade" class="level1">
 <h1>Making Predictions and Setting Up a Trade</h1>
-<p>The moment of truth arrived. With my models trained, I ran predictions on the most recent data point. It felt like peering into the future, albeit with some uncertainty:</p>
-<ol type="1">
-<li><strong>Interpreting Results:</strong> The models provided a confidence level for the magnitude of the upcoming price movement.</li>
-<li><strong>Executing the Straddle Strategy:</strong> Using the prediction, I bought both a call and a put option at the same strike price, ensuring I could profit from significant price swings in either direction.</li>
-</ol>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pipeline.predict(X_test)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The output is 0.055 and -0.03. This predicts one of the stock price movement after earning announcement is +5.5% and the other one’s is -3%. However, the actual movement of these stocks (which are PLTR and MARA) was +23.47% and -13.99%.</p>
+<p>If you want to predict other stocks, just create a dataframe with the same format as your <code>X_test</code> and feed it to <code>pipeline.predict()</code>.</p>
+<p><strong>Executing the Straddle Strategy:</strong> The predictions suggested small price movements, making the straddle strategy unsuitable for this scenario.</p>
 </section>
 <section id="conclusion" class="level1">
 <h1>Conclusion</h1>
@@ -266,6 +342,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
 <hr>
 <p>Trading is as much an art as it is a science. By combining a tried-and-tested strategy with cutting-edge machine learning, I’ve uncovered a new way to approach the market. The question is: are you ready to explore it for yourself?</p>
+<p>You can find my code and dataset <a href="https://github.com/Piloxita/option_trade">here</a></p>
 
 
 </section>

@@ -6,11 +6,31 @@ categories: [news, trading, machine learning]
 image: "image.jpg"
 ---
 
+![](image.jpg)
+
 # Introduction
 
-It started like many trading days before—a quiet anticipation as I scrolled through earnings reports, scanning for opportunities. But this time, something clicked. Over the years, I’d noticed a recurring pattern: earnings announcements often sent stock prices soaring or tumbling. These moments, while fleeting, held immense potential for profit.
+It started like many trading days before—a quiet anticipation as I scrolled through earnings reports, scanning for opportunities. But this time, something clicked. Over the years, I’d noticed a recurring pattern: earnings announcements often sent stock prices soaring or tumbling. These fleeting moments held immense potential for profit.
 
-I decided to dig deeper. Could machine learning, with its ability to uncover hidden patterns in data, help me predict the magnitude of these price movements? Armed with curiosity, a straddle strategy, and a passion for data, I set out on a journey to merge trading and technology. This post is the story of that journey.
+Driven by curiosity, I asked myself: could machine learning—with its ability to uncover hidden patterns in data—help predict the magnitude of these price movements? Armed with a passion for data and a love for strategy, I set out to merge technology and trading. This blog captures my journey.
+
+# Folder and Environment Setup
+
+Before jumping into the data, I made sure to set up an efficient and organized working environment. Here’s a simple setup to get you started:
+
+1. Place your Excel file and Jupyter Notebook in the same folder.
+2. For a complete project structure, I recommend this helpful [guide](https://towardsdatascience.com/how-to-structure-an-ml-project-for-reproducibility-and-maintainability-54d5e53b4c82).
+
+**Python Environment:** Use a [virtual environment](https://medium.com/towards-data-science/introduction-to-conda-virtual-environments-eaea4ac84e28) to ensure consistency: 
+
+- Create a virtual environment using `conda env create --name <env name>`.  
+- Activate the environment (`conda activate <env name>`).  
+- Install the necessary packages, such as `pandas`, `numpy`, `scikit-learn`, `lightgbm`, `xgboost`, and `catboost`.
+- **Note:** you can find my environment.yml file in [my github repo](https://github.com/Piloxita/option_trade) to set up a completely similar environment for this project. 
+
+**Version Control:** Use Git for version control to track changes in your project.
+
+This setup ensures that your workflow is clean, reproducible, and scalable as the project evolves.
 
 # Collecting and Storing Data
 
@@ -20,18 +40,68 @@ Every story needs a foundation, and in this case, it’s data. To predict stock 
 - **Sentiment Indicators:** The put/call ratio, a barometer of market sentiment during earnings seasons.
 - **Historical Earnings Movements:** Data on how stock prices reacted to past earnings announcements.
 
-I meticulously compiled these features, ensuring they were well-organized in Excel for easy analysis. Think of it as laying the groundwork for a house—the more solid your foundation, the better the outcome.
+I compiled these features in an Excel file, structured for easy analysis. Remember to save your file in the same directory as your notebook.
+
+![Figure 1: My excel file with pandas-friendly labels](excel1.jpg){fig-alt="My excel file with pandas-friendly labels."}
+
+![Figure 2: My excel file with pandas-friendly labels (cont)](excel2.jpg)
+
+Some of this data, like call/put options and momentum grades, may require a subscription. You can explore options data on [Seeking Alpha](https://seekingalpha.com/symbol/AAPL/options) or stock data on [TradingView](https://www.tradingview.com/). 
 
 # Input and Clean Data
 
 Once my data was in place, the next step was to clean and prepare it for analysis. This is where the real magic happens:
 
-1. **Importing Data:** Using Python’s `pandas` library to read the Excel file into a structured format.
-2. **Preprocessing:**
-   - Filling in missing values like a detective piecing together a puzzle.
-   - Normalizing numerical features to ensure consistency across the dataset.
-   - Encoding categorical variables so the machine learning models could make sense of them.
+1. **Importing Libraries**
+```python
+import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+```
 
+2. **Importing Data:** Using Python’s `pandas` library to read the Excel file into a structured format.
+```python
+df = pd.read_excel('open interest.xlsx')
+df.tail()
+```
+![Figure 3: Read excel to panda dataframe](df.jpg)
+
+3. **Split Dataset to Train and Test set:** This is to make sure there is no data leakage happening in the training process
+```python
+train_df, test_df = train_test_split(df, test_size=0.1, random_state=123)
+
+X_train = train_df.drop('Day_after_earning_gain_loss', axis = 1)
+y_train = train_df['Day_after_earning_gain_loss']
+X_test = test_df.drop('Day_after_earning_gain_loss', axis = 1)
+y_test = test_df['Day_after_earning_gain_loss']
+```
+
+4. **Preprocessing**
+- **Drop Irrelevant Columns:** Remove columns like `Date` and `Ticker` that do not add value to the predictive model.
+- **One-Hot Encoding:** Convert categorical variables such as `Weekday`, `Industry`, and `Revenue_source` into numerical representations.
+- **Ordinal Encoding:** Transform ordinal features, such as `Momentum_Grade`, based on a predefined category order.
+- **Pass-through Features:** Allow numerical columns that require no transformation to pass through unchanged.
+
+Here’s a Python snippet illustrating the preprocessing pipeline:
+
+```python
+drop_columns = ['Date', 'Ticker']
+one_hot_columns = ['Weekday', 'Industry', 'Revenue_source']
+ordinal_columns = ['Momentum_Grade']
+pass_through_columns = list(set(X_train.columns) - set(drop_columns + one_hot_columns + ordinal_columns + ['Day_after_earning_gain_loss']))
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('drop', 'drop', drop_columns),
+        ('onehot', OneHotEncoder(handle_unknown='ignore'), one_hot_columns),
+        ('ordinal', OrdinalEncoder(categories=[momentum_grade_order]), ordinal_columns),
+        ('passthrough', 'passthrough', pass_through_columns)
+    ]
+)
+```
 Data preparation might seem tedious, but it’s the unsung hero of any successful machine learning project. Without clean data, even the best algorithms can falter.
 
 # Training Models
@@ -45,32 +115,37 @@ With my data prepped, it was time to bring in the heavy hitters: **LightGBM**, *
 However, with a limited dataset, I faced a tough decision: should I fine-tune the models or stick with their default settings? To avoid overfitting, I chose the latter, focusing on creating a balanced baseline instead. Here’s a snippet of how I trained the models:
 
 ```python
+from sklearn.ensemble import VotingRegressor
 from lightgbm import LGBMRegressor
 from xgboost import XGBRegressor
 from catboost import CatBoostRegressor
 
-# Initialize models
-models = [
-    LGBMRegressor(),
-    XGBRegressor(),
-    CatBoostRegressor(verbose=0)
-]
+lgbm = LGBMRegressor()
+xgb = XGBRegressor(verbosity=0)
+catboost = CatBoostRegressor(verbose=0)
 
-# Train models
-for model in models:
-    model.fit(X_train, y_train)
+ensemble_model = VotingRegressor(estimators=[
+    ('lgbm', lgbm),
+    ('xgb', xgb),
+    ('catboost', catboost)
+])
 
-# Evaluate
-for model in models:
-    print(f"{model.__class__.__name__} Score: {model.score(X_test, y_test)}")
+pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('regressor', ensemble_model)
+])
 ```
 
 # Making Predictions and Setting Up a Trade
 
-The moment of truth arrived. With my models trained, I ran predictions on the most recent data point. It felt like peering into the future, albeit with some uncertainty:
+```python
+pipeline.predict(X_test)
+```  
+The output is 0.055 and -0.03. This predicts one of the stock price movement after earning announcement is +5.5% and the other one's is -3%. However, the actual movement of these stocks (which are PLTR and MARA) was +23.47% and -13.99%.
 
-1. **Interpreting Results:** The models provided a confidence level for the magnitude of the upcoming price movement.
-2. **Executing the Straddle Strategy:** Using the prediction, I bought both a call and a put option at the same strike price, ensuring I could profit from significant price swings in either direction.
+If you want to predict other stocks, just create a dataframe with the same format as your `X_test` and feed it to `pipeline.predict()`.
+
+**Executing the Straddle Strategy:** The predictions suggested small price movements, making the straddle strategy unsuitable for this scenario.
 
 # Conclusion
 
@@ -84,3 +159,5 @@ Looking back, this journey was as much about discovery as it was about trading. 
 ---
 
 Trading is as much an art as it is a science. By combining a tried-and-tested strategy with cutting-edge machine learning, I’ve uncovered a new way to approach the market. The question is: are you ready to explore it for yourself?
+
+You can find my code and dataset [here](https://github.com/Piloxita/option_trade)
