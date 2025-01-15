@@ -28,7 +28,7 @@ Before jumping into the data, I made sure to set up an efficient and organized w
 - Install the necessary packages, such as `pandas`, `numpy`, `scikit-learn`, `lightgbm`, `xgboost`, and `catboost`.
 - **Note:** you can find my environment.yml file in [my github repo](https://github.com/Piloxita/option_trade) to set up a completely similar environment for this project. 
 
-**Version Control:** Use Git for version control to track changes in your project.
+**Version Control:** Use Git for [version control](https://medium.com/@pytechacademy/mastering-version-control-introduction-to-git-and-github-e39222216be0) to track changes in your project.
 
 This setup ensures that your workflow is clean, reproducible, and scalable as the project evolves.
 
