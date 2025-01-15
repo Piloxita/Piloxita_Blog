@@ -2,7 +2,7 @@
 title: "Predicting Stock Price Movements on Earnings Announcements Using Machine Learning"
 author: "Long Nguyen"
 date: "2025-01-15"
-categories: [news, trading, machine learning]
+categories: [trading, machine learning]
 image: "image.jpg"
 ---
 
